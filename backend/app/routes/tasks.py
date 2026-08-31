@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..activity_logger import log_activity
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import UserStory, Task, User, ProjectMember
+from ..routes.notifications import create_task_notification
 from ..schemas import TaskCreate, TaskUpdate, TaskResponse
 
 router = APIRouter(
@@ -21,6 +22,7 @@ router = APIRouter(
 def create_task(
     story_id: int,
     task: TaskCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -95,6 +97,12 @@ def create_task(
 
     db.commit()
     db.refresh(new_task)
+
+    background_tasks.add_task(
+        create_task_notification,
+        new_task.id,
+        f"New task created: '{new_task.title}'"
+    )
 
     return new_task
 
