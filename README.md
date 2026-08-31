@@ -438,16 +438,10 @@ The application implements the core requirements of the Agile Project Management
 
 ````
 
-### ⚠️ Before you paste it
-
-There are **3 placeholders you must replace**:
+ replace**:
 
 ```text
-<GITHUB_REPOSITORY_URL>
 <DEMO_URL>
 <VIDEO_URL>
 ````
 
-And only add demo credentials if you're actually providing a dedicated demo account.
-
-**Next after README:** we do the **Architecture + Database Schema/ER diagram** documentation.
