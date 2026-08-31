@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from ..activity_logger import log_activity
+from ..auth import get_current_user
 from ..database import get_db
-from ..models import Project
+from ..models import Project, User
 from ..schemas import ProjectCreate, ProjectUpdate, ProjectResponse
+
 
 router = APIRouter(
     prefix="/projects",
@@ -19,7 +22,8 @@ router = APIRouter(
 )
 def create_project(
     project: ProjectCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     new_project = Project(
         name=project.name,
@@ -29,6 +33,16 @@ def create_project(
     db.add(new_project)
     db.commit()
     db.refresh(new_project)
+
+    log_activity(
+        db=db,
+        user_id=current_user.id,
+        project_id=new_project.id,
+        action="CREATE",
+        entity_type="PROJECT",
+        entity_id=new_project.id,
+        details=f"Created project '{new_project.name}'"
+    )
 
     return new_project
 
@@ -41,7 +55,9 @@ def create_project(
 def get_projects(
     db: Session = Depends(get_db)
 ):
-    return db.query(Project).order_by(Project.created_at.desc()).all()
+    return db.query(Project).order_by(
+        Project.created_at.desc()
+    ).all()
 
 
 # GET SINGLE PROJECT
@@ -74,7 +90,8 @@ def get_project(
 def update_project(
     project_id: int,
     project_data: ProjectUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     project = db.query(Project).filter(
         Project.id == project_id
@@ -96,6 +113,16 @@ def update_project(
     db.commit()
     db.refresh(project)
 
+    log_activity(
+        db=db,
+        user_id=current_user.id,
+        project_id=project.id,
+        action="UPDATE",
+        entity_type="PROJECT",
+        entity_id=project.id,
+        details=f"Updated project '{project.name}'"
+    )
+
     return project
 
 
@@ -106,7 +133,8 @@ def update_project(
 )
 def delete_project(
     project_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     project = db.query(Project).filter(
         Project.id == project_id
@@ -117,6 +145,19 @@ def delete_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+
+    project_name = project.name
+    project_id_value = project.id
+
+    log_activity(
+        db=db,
+        user_id=current_user.id,
+        project_id=project_id_value,
+        action="DELETE",
+        entity_type="PROJECT",
+        entity_id=project_id_value,
+        details=f"Deleted project '{project_name}'"
+    )
 
     db.delete(project)
     db.commit()
