@@ -24,7 +24,6 @@ A full-stack Agile Project Management Tool designed for small teams to manage pr
 - [Database Schema](#database-schema)
 - [Security Considerations](#security-considerations)
 - [Design Decisions & Tradeoffs](#design-decisions--tradeoffs)
-- [AI Usage](#ai-usage)
 - [Future Improvements](#future-improvements)
 - [Demo](#demo)
 - [Demo Account](#demo-account)
@@ -349,7 +348,6 @@ Project
 
 Project membership connects users with projects, while notifications and activity logs provide supporting workflow and audit information.
 
-A detailed ER/database diagram is documented separately in the project documentation.
 
 ## Security Considerations
 
@@ -393,19 +391,6 @@ Notification processing is handled asynchronously so notification work does not 
 ### Notification Retry Handling
 
 Notification records track processing state and retry information so failures can be identified and handled without silently losing notification events.
-
-## AI Usage
-
-AI tools were used during development as a development assistant for:
-
-* Debugging errors
-* Reviewing implementation approaches
-* Improving UI structure and styling
-* Generating development suggestions
-* Assisting with documentation
-* Reviewing API and frontend integration issues
-
-All generated suggestions were reviewed, tested, and integrated based on the application's actual requirements and behavior.
 
 ## Future Improvements
 
@@ -466,11 +451,3 @@ The application implements the core requirements of the Agile Project Management
 * Automated backend tests
 
 ````
-
- replace**:
-
-```text
-<DEMO_URL>
-<VIDEO_URL>
-````
-
