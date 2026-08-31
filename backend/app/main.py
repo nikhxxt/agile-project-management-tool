@@ -8,7 +8,9 @@ from .routes import (
     tasks,
     users,
     auth,
-    activity
+    activity,
+    dashboard,
+    notifications
 )
 
 
@@ -28,6 +30,8 @@ app.include_router(tasks.router)
 app.include_router(users.router)
 app.include_router(auth.router)
 app.include_router(activity.router)
+app.include_router(dashboard.router)
+app.include_router(notifications.router)
 
 
 @app.get("/")

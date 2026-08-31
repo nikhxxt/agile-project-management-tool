@@ -34,18 +34,6 @@ def get_project_activity(
             detail="Project not found"
         )
 
-    # Check current user is a project member
-    is_member = any(
-        member.user_id == current_user.id
-        for member in project.members
-    )
-
-    if not is_member:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not a member of this project"
-        )
-
     return (
         db.query(ActivityLog)
         .filter(
