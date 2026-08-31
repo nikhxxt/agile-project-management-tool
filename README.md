@@ -1,7 +1,3 @@
-# agile-project-management-tool
-Yep. I’ll give you the **complete final `README.md` content** to paste into your project.
-
-````markdown
 # AgileFlow Platform
 
 A full-stack Agile Project Management Tool designed for small teams to manage projects, user stories, tasks, team members, activity history, and notifications through a simple Agile workflow.
