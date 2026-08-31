@@ -12,6 +12,29 @@ AgileFlow is a full-stack Agile Project Management Tool for a small team. It use
 - Activity history for project, story, and task changes.
 - Recipient-specific in-app assignment notifications processed with FastAPI background tasks.
 
+ ## Tech Stack
+
+### Frontend
+- React
+- Vite
+- React Router
+- Axios
+- CSS
+
+### Backend
+- Python
+- FastAPI
+- SQLAlchemy
+- JWT authentication
+- bcrypt password hashing
+- Uvicorn
+
+### Database
+- SQLite
+
+### Testing
+- Pytest
+
 ## Work-item states
 
 | Item | Status values | Priority values |
