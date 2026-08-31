@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from ..activity_logger import log_activity
 from ..auth import get_current_user
 from ..database import get_db
-from ..models import Project, User
+from ..models import Project, ProjectMember, User
 from ..schemas import ProjectCreate, ProjectUpdate, ProjectResponse
 
 
@@ -34,6 +34,16 @@ def create_project(
     db.commit()
     db.refresh(new_project)
 
+    # Automatically add the creator as a project member
+    membership = ProjectMember(
+        user_id=current_user.id,
+        project_id=new_project.id
+    )
+
+    db.add(membership)
+    db.commit()
+
+    # Record project creation
     log_activity(
         db=db,
         user_id=current_user.id,
@@ -149,6 +159,7 @@ def delete_project(
     project_name = project.name
     project_id_value = project.id
 
+    # Record deletion before deleting the project
     log_activity(
         db=db,
         user_id=current_user.id,
