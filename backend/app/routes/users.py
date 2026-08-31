@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from ..auth import hash_password
 from ..database import get_db
 from ..models import User, Project, ProjectMember
 from ..schemas import UserCreate, UserResponse
+
 
 router = APIRouter(
     prefix="/users",
@@ -34,7 +36,11 @@ def create_user(
     new_user = User(
         name=user.name,
         email=user.email,
-        password_hash=user.password,
+        password_hash=(
+            hash_password(user.password)
+            if user.password
+            else None
+        ),
         role=user.role
     )
 
@@ -53,7 +59,9 @@ def create_user(
 def get_users(
     db: Session = Depends(get_db)
 ):
-    return db.query(User).order_by(User.name).all()
+    return db.query(User).order_by(
+        User.name
+    ).all()
 
 
 # GET SINGLE USER
@@ -156,7 +164,9 @@ def get_project_members(
     members = (
         db.query(User)
         .join(ProjectMember)
-        .filter(ProjectMember.project_id == project_id)
+        .filter(
+            ProjectMember.project_id == project_id
+        )
         .all()
     )
 
