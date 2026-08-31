@@ -7,7 +7,8 @@ from .routes import (
     stories,
     tasks,
     users,
-    auth
+    auth,
+    activity
 )
 
 
@@ -26,6 +27,7 @@ app.include_router(stories.router)
 app.include_router(tasks.router)
 app.include_router(users.router)
 app.include_router(auth.router)
+app.include_router(activity.router)
 
 
 @app.get("/")
