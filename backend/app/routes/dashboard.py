@@ -5,6 +5,7 @@ from sqlalchemy import func
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import Project, UserStory, Task, User
+from ..permissions import require_project_membership
 
 
 router = APIRouter(
@@ -75,6 +76,8 @@ def get_project_progress(
         return {
             "error": "Project not found"
         }
+
+    require_project_membership(db, project_id, current_user)
 
     total_stories = db.query(UserStory).filter(
         UserStory.project_id == project_id

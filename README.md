@@ -265,6 +265,9 @@ python -m venv venv
 
 pip install -r requirements.txt
 
+Copy-Item ..\.env.example ..\.env
+# Replace the example value in ..\.env with a long, random JWT secret.
+
 $env:PYTHONPATH = "."
 python -m uvicorn app.main:app
 ```
@@ -306,13 +309,14 @@ Run backend tests:
 cd backend
 
 $env:PYTHONPATH = "."
+$env:JWT_SECRET_KEY = "test-only-secret"
 pytest -q
 ```
 
 Expected result:
 
 ```text
-8 passed
+11 passed
 ```
 
 Build the frontend:
@@ -351,26 +355,31 @@ Project membership connects users with projects, while notifications and activit
 
 ## Security Considerations
 
-The application includes several security measures:
+* Passwords are stored as bcrypt hashes; plaintext passwords are not persisted.
+* Authentication uses signed, expiring JWT bearer tokens (HS256). Application-data APIs require a valid token; registration, login, root, and health endpoints are public.
+* Public registration always creates a `member` account. User-management APIs require an authenticated administrator.
+* Project, story, task, activity, and project-member access is limited to project members. Task assignment and reassignment also verify that an assignee belongs to the task's project.
+* `JWT_SECRET_KEY` is read from the environment (or the local, ignored `.env` file) and is never hardcoded. Generate a unique, long random value for each deployment and rotate it if exposed.
+* `.gitignore` excludes virtual environments, environment files, SQLite databases, Python caches, Node modules, and frontend build output.
+* The frontend keeps its bearer token in browser local storage for this SPA. Deploy over HTTPS; the app does not provide cookie-based session protection.
 
-* JWT-based authentication
-* Password hashing rather than storing plaintext passwords
-* Protected frontend routes
-* Authentication checks on backend endpoints
-* Project membership validation
-* Task assignment validation
-* Environment variables for sensitive configuration
-* `.gitignore` used to prevent local/generated files and secrets from being committed
-
-Production deployment should use HTTPS, secure secret management, stronger production configuration, and a production-grade database where appropriate.
+Production deployment should use HTTPS, managed secret storage, and a production-grade database where appropriate.
 
 ## Design Decisions & Tradeoffs
 
 ### SQLite
 
-SQLite was selected because the assignment targets a small team and SQLite provides simple persistent storage without requiring a separate database server.
+SQLite was selected because the assignment targets a small team and SQLite provides simple persistent storage without requiring a separate database server. Local database files are excluded from Git.
 
 For a larger production deployment, PostgreSQL or another production-grade relational database would be more appropriate.
+
+### Authorization Scope
+
+Authorization is based on project membership rather than separate per-project roles. Any project member can manage that project's work and membership, while user-wide administration is reserved for `admin` users. This keeps the assignment focused, at the cost of not having owner/editor/viewer distinctions.
+
+### Token Lifecycle
+
+JWTs expire after 60 minutes and are stateless. This simplifies the application, but there is no server-side token revocation list.
 
 ### REST API
 

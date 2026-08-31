@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from ..auth import hash_password
+from ..auth import get_current_user, hash_password
 from ..database import get_db
 from ..models import User, Project, ProjectMember
+from ..permissions import require_project_membership
 from ..schemas import UserCreate, UserResponse
 
 
@@ -21,8 +22,15 @@ router = APIRouter(
 )
 def create_user(
     user: UserCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can create users"
+        )
+
     existing_user = db.query(User).filter(
         User.email == user.email
     ).first()
@@ -57,8 +65,15 @@ def create_user(
     response_model=list[UserResponse]
 )
 def get_users(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can view all users"
+        )
+
     return db.query(User).order_by(
         User.name
     ).all()
@@ -71,7 +86,8 @@ def get_users(
 )
 def get_user(
     user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     user = db.query(User).filter(
         User.id == user_id
@@ -81,6 +97,12 @@ def get_user(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
+        )
+
+    if current_user.id != user_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not allowed to view this user"
         )
 
     return user
@@ -94,7 +116,8 @@ def get_user(
 def add_user_to_project(
     user_id: int,
     project_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     user = db.query(User).filter(
         User.id == user_id
@@ -115,6 +138,8 @@ def add_user_to_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+
+    require_project_membership(db, project_id, current_user)
 
     existing_membership = db.query(ProjectMember).filter(
         ProjectMember.user_id == user_id,
@@ -149,7 +174,8 @@ def add_user_to_project(
 )
 def get_project_members(
     project_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     project = db.query(Project).filter(
         Project.id == project_id
@@ -160,6 +186,8 @@ def get_project_members(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+
+    require_project_membership(db, project_id, current_user)
 
     members = (
         db.query(User)

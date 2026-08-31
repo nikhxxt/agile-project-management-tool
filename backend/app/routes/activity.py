@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import ActivityLog, Project, User
+from ..permissions import require_project_membership
 from ..schemas import ActivityLogResponse
 
 
@@ -33,6 +34,8 @@ def get_project_activity(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+
+    require_project_membership(db, project_id, current_user)
 
     return (
         db.query(ActivityLog)

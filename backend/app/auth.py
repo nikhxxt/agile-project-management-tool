@@ -1,18 +1,25 @@
 from datetime import datetime, timedelta, timezone
+import os
+from pathlib import Path
 
 import bcrypt._bcrypt as _bcrypt_lib
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 
 from .database import get_db
 from .models import User
 
 
-SECRET_KEY = "change-this-secret-key-before-deployment"
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY must be configured")
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/auth/login"

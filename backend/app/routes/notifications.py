@@ -57,7 +57,10 @@ def create_task_notification(task_id: int, message: str):
 
 
 @router.get("", response_model=list[NotificationResponse])
-def get_notifications(db: Session = Depends(get_db)):
+def get_notifications(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     return (
         db.query(Notification)
         .order_by(Notification.created_at.desc())
@@ -70,7 +73,8 @@ def get_notifications(db: Session = Depends(get_db)):
 @router.get("/tasks/{task_id}", response_model=list[NotificationResponse])
 def get_task_notifications(
     task_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
@@ -89,7 +93,8 @@ def get_task_notifications(
 @router.get("/{notification_id}", response_model=NotificationResponse)
 def get_notification(
     notification_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     notification = db.query(Notification).filter(
         Notification.id == notification_id
@@ -105,7 +110,8 @@ def get_notification(
 @router.post("/{notification_id}/process", response_model=NotificationResponse)
 def process_notification_route(
     notification_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     notification = db.query(Notification).filter(
         Notification.id == notification_id

@@ -5,6 +5,7 @@ from ..activity_logger import log_activity
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import UserStory, Task, User, ProjectMember
+from ..permissions import require_project_membership
 from ..routes.notifications import create_task_notification
 from ..schemas import TaskCreate, TaskUpdate, TaskResponse
 
@@ -35,6 +36,8 @@ def create_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User story not found"
         )
+
+    require_project_membership(db, story.project_id, current_user)
 
     if task.assigned_to is not None:
         user = db.query(User).filter(
@@ -114,7 +117,8 @@ def create_task(
 )
 def get_story_tasks(
     story_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     story = db.query(UserStory).filter(
         UserStory.id == story_id
@@ -125,6 +129,8 @@ def get_story_tasks(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User story not found"
         )
+
+    require_project_membership(db, story.project_id, current_user)
 
     return db.query(Task).filter(
         Task.user_story_id == story_id
@@ -138,7 +144,8 @@ def get_story_tasks(
 )
 def get_task(
     task_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     task = db.query(Task).filter(
         Task.id == task_id
@@ -149,6 +156,11 @@ def get_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found"
         )
+
+    story = db.query(UserStory).filter(
+        UserStory.id == task.user_story_id
+    ).first()
+    require_project_membership(db, story.project_id, current_user)
 
     return task
 
@@ -177,6 +189,8 @@ def update_task(
     story = db.query(UserStory).filter(
         UserStory.id == task.user_story_id
     ).first()
+
+    require_project_membership(db, story.project_id, current_user)
 
     old_status = task.status
     old_assignee = task.assigned_to
@@ -310,6 +324,8 @@ def delete_task(
     story = db.query(UserStory).filter(
         UserStory.id == task.user_story_id
     ).first()
+
+    require_project_membership(db, story.project_id, current_user)
 
     project_id = story.project_id
     task_id_value = task.id

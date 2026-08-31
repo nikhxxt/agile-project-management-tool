@@ -48,7 +48,7 @@ def register(
         password_hash=hash_password(
             user_data.password
         ) if user_data.password else None,
-        role=user_data.role
+        role="member"
     )
 
     db.add(new_user)

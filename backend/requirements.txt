@@ -1,4 +1,6 @@
 fastapi
+bcrypt
+python-jose[cryptography]
 uvicorn[standard]
 sqlalchemy
 pydantic

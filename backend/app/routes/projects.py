@@ -5,6 +5,7 @@ from ..activity_logger import log_activity
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import Project, ProjectMember, User
+from ..permissions import require_project_membership
 from ..schemas import ProjectCreate, ProjectUpdate, ProjectResponse
 
 
@@ -61,9 +62,12 @@ def create_project(
     response_model=list[ProjectResponse]
 )
 def get_projects(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    return db.query(Project).order_by(
+    return db.query(Project).join(ProjectMember).filter(
+        ProjectMember.user_id == current_user.id
+    ).order_by(
         Project.created_at.desc()
     ).all()
 
@@ -75,7 +79,8 @@ def get_projects(
 )
 def get_project(
     project_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     project = db.query(Project).filter(
         Project.id == project_id
@@ -86,6 +91,8 @@ def get_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+
+    require_project_membership(db, project_id, current_user)
 
     return project
 
@@ -110,6 +117,8 @@ def update_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+
+    require_project_membership(db, project_id, current_user)
 
     update_data = project_data.model_dump(
         exclude_unset=True
@@ -154,6 +163,8 @@ def delete_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+
+    require_project_membership(db, project_id, current_user)
 
     project_name = project.name
     project_id_value = project.id

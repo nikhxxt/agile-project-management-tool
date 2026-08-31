@@ -5,6 +5,7 @@ from ..activity_logger import log_activity
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import Project, UserStory, User
+from ..permissions import require_project_membership
 from ..schemas import StoryCreate, StoryUpdate, StoryResponse
 
 router = APIRouter(
@@ -33,6 +34,8 @@ def create_story(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+
+    require_project_membership(db, project_id, current_user)
 
     new_story = UserStory(
         project_id=project_id,
@@ -68,7 +71,8 @@ def create_story(
 )
 def get_project_stories(
     project_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     project = db.query(Project).filter(
         Project.id == project_id
@@ -79,6 +83,8 @@ def get_project_stories(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+
+    require_project_membership(db, project_id, current_user)
 
     return db.query(UserStory).filter(
         UserStory.project_id == project_id
@@ -92,7 +98,8 @@ def get_project_stories(
 )
 def get_story(
     story_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     story = db.query(UserStory).filter(
         UserStory.id == story_id
@@ -103,6 +110,8 @@ def get_story(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User story not found"
         )
+
+    require_project_membership(db, story.project_id, current_user)
 
     return story
 
@@ -127,6 +136,8 @@ def update_story(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User story not found"
         )
+
+    require_project_membership(db, story.project_id, current_user)
 
     update_data = story_data.model_dump(
         exclude_unset=True
@@ -183,6 +194,8 @@ def delete_story(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User story not found"
         )
+
+    require_project_membership(db, story.project_id, current_user)
 
     project_id = story.project_id
     story_id_value = story.id
