@@ -449,5 +449,3 @@ The application implements the core requirements of the Agile Project Management
 * Asynchronous notifications
 * API documentation
 * Automated backend tests
-
-````
