@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import UserStory, Task
+from ..models import UserStory, Task, User, ProjectMember
 from ..schemas import TaskCreate, TaskUpdate, TaskResponse
 
 router = APIRouter(
@@ -32,7 +32,32 @@ def create_task(
             detail="User story not found"
         )
 
-    # If an assignee is provided, verify later when users API exists
+    # Validate assignee if provided
+    if task.assigned_to is not None:
+        user = db.query(User).filter(
+            User.id == task.assigned_to
+        ).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Assigned user not found"
+            )
+
+        # Get the project through the story
+        project_id = story.project_id
+
+        membership = db.query(ProjectMember).filter(
+            ProjectMember.user_id == task.assigned_to,
+            ProjectMember.project_id == project_id
+        ).first()
+
+        if not membership:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User is not a member of this project"
+            )
+
     new_task = Task(
         user_story_id=story_id,
         title=task.title,
@@ -115,6 +140,36 @@ def update_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found"
         )
+
+    # If changing the assignee, validate the new user
+    if task_data.assigned_to is not None:
+
+        user = db.query(User).filter(
+            User.id == task_data.assigned_to
+        ).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Assigned user not found"
+            )
+
+        # Find the project through:
+        # Task → User Story → Project
+        story = db.query(UserStory).filter(
+            UserStory.id == task.user_story_id
+        ).first()
+
+        membership = db.query(ProjectMember).filter(
+            ProjectMember.user_id == task_data.assigned_to,
+            ProjectMember.project_id == story.project_id
+        ).first()
+
+        if not membership:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User is not a member of this project"
+            )
 
     update_data = task_data.model_dump(
         exclude_unset=True
