@@ -45,9 +45,7 @@ def register(
     new_user = User(
         name=user_data.name,
         email=user_data.email,
-        password_hash=hash_password(
-            user_data.password
-        ) if user_data.password else None,
+        password_hash=hash_password(user_data.password),
         role="member"
     )
 

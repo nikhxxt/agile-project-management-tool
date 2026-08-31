@@ -172,15 +172,25 @@ class Notification(Base):
         ForeignKey("tasks.id", ondelete="CASCADE"),
         nullable=False
     )
+    recipient_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     message = Column(Text, nullable=False)
     status = Column(String(30), default="PENDING")
     retry_count = Column(Integer, default=0)
+    last_attempt_at = Column(DateTime, nullable=True)
+    next_retry_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     task = relationship(
         "Task",
         back_populates="notifications"
     )
+
+    recipient = relationship("User")
 
 
 class ActivityLog(Base):

@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = "sqlite:///./agile.db"
@@ -15,6 +15,24 @@ SessionLocal = sessionmaker(
 )
 
 Base = declarative_base()
+
+
+def apply_schema_migrations() -> None:
+    """Apply the small additive migration needed by existing local SQLite files."""
+    inspector = inspect(engine)
+    if "notifications" not in inspector.get_table_names():
+        return
+
+    columns = {column["name"] for column in inspector.get_columns("notifications")}
+    additions = {
+        "recipient_id": "INTEGER",
+        "last_attempt_at": "DATETIME",
+        "next_retry_at": "DATETIME",
+    }
+    with engine.begin() as connection:
+        for name, definition in additions.items():
+            if name not in columns:
+                connection.execute(text(f"ALTER TABLE notifications ADD COLUMN {name} {definition}"))
 
 
 def get_db():

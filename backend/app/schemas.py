@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -17,8 +17,7 @@ class UserCreate(BaseModel):
         min_length=5,
         max_length=150
     )
-    password: Optional[str] = Field(
-        default=None,
+    password: str = Field(
         min_length=6,
         max_length=100
     )
@@ -47,6 +46,7 @@ class ProjectCreate(BaseModel):
         max_length=150
     )
     description: Optional[str] = None
+    status: Literal["ACTIVE", "COMPLETED", "ARCHIVED"] = "ACTIVE"
 
 
 class ProjectUpdate(BaseModel):
@@ -56,7 +56,7 @@ class ProjectUpdate(BaseModel):
         max_length=150
     )
     description: Optional[str] = None
-    status: Optional[str] = None
+    status: Optional[Literal["ACTIVE", "COMPLETED", "ARCHIVED"]] = None
 
 
 class ProjectResponse(BaseModel):
@@ -82,8 +82,8 @@ class StoryCreate(BaseModel):
         max_length=200
     )
     description: Optional[str] = None
-    status: str = "BACKLOG"
-    priority: str = "MEDIUM"
+    status: Literal["BACKLOG", "IN_PROGRESS", "DONE"] = "BACKLOG"
+    priority: Literal["LOW", "MEDIUM", "HIGH"] = "MEDIUM"
 
 
 class StoryUpdate(BaseModel):
@@ -93,8 +93,8 @@ class StoryUpdate(BaseModel):
         max_length=200
     )
     description: Optional[str] = None
-    status: Optional[str] = None
-    priority: Optional[str] = None
+    status: Optional[Literal["BACKLOG", "IN_PROGRESS", "DONE"]] = None
+    priority: Optional[Literal["LOW", "MEDIUM", "HIGH"]] = None
 
 
 class StoryResponse(BaseModel):
@@ -122,8 +122,8 @@ class TaskCreate(BaseModel):
         max_length=200
     )
     description: Optional[str] = None
-    status: str = "TODO"
-    priority: str = "MEDIUM"
+    status: Literal["TODO", "IN_PROGRESS", "DONE"] = "TODO"
+    priority: Literal["LOW", "MEDIUM", "HIGH"] = "MEDIUM"
     assigned_to: Optional[int] = None
     due_date: Optional[date] = None
 
@@ -135,8 +135,8 @@ class TaskUpdate(BaseModel):
         max_length=200
     )
     description: Optional[str] = None
-    status: Optional[str] = None
-    priority: Optional[str] = None
+    status: Optional[Literal["TODO", "IN_PROGRESS", "DONE"]] = None
+    priority: Optional[Literal["LOW", "MEDIUM", "HIGH"]] = None
     assigned_to: Optional[int] = None
     due_date: Optional[date] = None
 
@@ -165,9 +165,12 @@ class TaskResponse(BaseModel):
 class NotificationResponse(BaseModel):
     id: int
     task_id: int
+    recipient_id: int
     message: str
     status: str
     retry_count: int
+    last_attempt_at: Optional[datetime]
+    next_retry_at: Optional[datetime]
     created_at: datetime
 
     model_config = ConfigDict(

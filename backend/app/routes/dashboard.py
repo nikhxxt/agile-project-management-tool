@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, select
 
 from ..auth import get_current_user
 from ..database import get_db
-from ..models import Project, UserStory, Task, User
+from ..models import Project, ProjectMember, UserStory, Task, User
 from ..permissions import require_project_membership
 
 
@@ -19,13 +19,17 @@ def get_dashboard_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    total_projects = db.query(Project).count()
-    total_stories = db.query(UserStory).count()
-    total_tasks = db.query(Task).count()
+    accessible_project_ids = select(ProjectMember.project_id).where(
+        ProjectMember.user_id == current_user.id
+    )
+    total_projects = db.query(Project).filter(Project.id.in_(accessible_project_ids)).count()
+    total_stories = db.query(UserStory).filter(UserStory.project_id.in_(accessible_project_ids)).count()
+    task_query = db.query(Task).join(UserStory).filter(
+        UserStory.project_id.in_(accessible_project_ids)
+    )
+    total_tasks = task_query.count()
 
-    completed_tasks = db.query(Task).filter(
-        Task.status == "DONE"
-    ).count()
+    completed_tasks = task_query.filter(Task.status == "DONE").count()
 
     completion_percentage = (
         round((completed_tasks / total_tasks) * 100, 2)
@@ -34,7 +38,7 @@ def get_dashboard_summary(
     )
 
     status_counts = dict(
-        db.query(
+        task_query.with_entities(
             Task.status,
             func.count(Task.id)
         )
@@ -43,7 +47,7 @@ def get_dashboard_summary(
     )
 
     priority_counts = dict(
-        db.query(
+        task_query.with_entities(
             Task.priority,
             func.count(Task.id)
         )
@@ -73,9 +77,7 @@ def get_project_progress(
     ).first()
 
     if not project:
-        return {
-            "error": "Project not found"
-        }
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     require_project_membership(db, project_id, current_user)
 

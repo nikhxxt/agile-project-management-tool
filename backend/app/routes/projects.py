@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from ..activity_logger import log_activity
@@ -6,7 +6,7 @@ from ..auth import get_current_user
 from ..database import get_db
 from ..models import Project, ProjectMember, User
 from ..permissions import require_project_membership
-from ..schemas import ProjectCreate, ProjectUpdate, ProjectResponse
+from ..schemas import ProjectCreate, ProjectUpdate, ProjectResponse, UserResponse
 
 
 router = APIRouter(
@@ -28,7 +28,8 @@ def create_project(
 ):
     new_project = Project(
         name=project.name,
-        description=project.description
+        description=project.description,
+        status=project.status,
     )
 
     db.add(new_project)
@@ -63,11 +64,21 @@ def create_project(
 )
 def get_projects(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    search: str | None = Query(default=None, description="Filter projects by name"),
+    status_filter: str | None = Query(default=None, alias="status_filter", description="Filter by project status")
 ):
-    return db.query(Project).join(ProjectMember).filter(
+    query = db.query(Project).join(ProjectMember).filter(
         ProjectMember.user_id == current_user.id
-    ).order_by(
+    )
+
+    if search:
+        query = query.filter(Project.name.ilike(f"%{search}%"))
+
+    if status_filter:
+        query = query.filter(Project.status == status_filter)
+
+    return query.order_by(
         Project.created_at.desc()
     ).all()
 
@@ -95,6 +106,22 @@ def get_project(
     require_project_membership(db, project_id, current_user)
 
     return project
+
+
+@router.get(
+    "/{project_id}/eligible-users",
+    response_model=list[UserResponse],
+)
+def get_eligible_users(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    require_project_membership(db, project_id, current_user)
+    return db.query(User).order_by(User.name).all()
 
 
 # UPDATE PROJECT

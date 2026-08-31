@@ -101,11 +101,13 @@ def create_task(
     db.commit()
     db.refresh(new_task)
 
-    background_tasks.add_task(
-        create_task_notification,
-        new_task.id,
-        f"New task created: '{new_task.title}'"
-    )
+    if new_task.assigned_to is not None:
+        background_tasks.add_task(
+            create_task_notification,
+            new_task.id,
+            new_task.assigned_to,
+            f"You were assigned task '{new_task.title}'",
+        )
 
     return new_task
 
@@ -173,6 +175,7 @@ def get_task(
 def update_task(
     task_id: int,
     task_data: TaskUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -297,6 +300,14 @@ def update_task(
 
     db.commit()
     db.refresh(task)
+
+    if old_assignee != task.assigned_to and task.assigned_to is not None:
+        background_tasks.add_task(
+            create_task_notification,
+            task.id,
+            task.assigned_to,
+            f"You were assigned task '{task.title}'",
+        )
 
     return task
 

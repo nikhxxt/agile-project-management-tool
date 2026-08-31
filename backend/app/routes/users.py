@@ -44,11 +44,7 @@ def create_user(
     new_user = User(
         name=user.name,
         email=user.email,
-        password_hash=(
-            hash_password(user.password)
-            if user.password
-            else None
-        ),
+        password_hash=hash_password(user.password),
         role=user.role
     )
 
@@ -165,6 +161,38 @@ def add_user_to_project(
         "user_id": user_id,
         "project_id": project_id
     }
+
+
+@router.delete(
+    "/{user_id}/projects/{project_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def remove_user_from_project(
+    user_id: int,
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    require_project_membership(db, project_id, current_user)
+
+    membership = db.query(ProjectMember).filter(
+        ProjectMember.user_id == user_id,
+        ProjectMember.project_id == project_id,
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project membership not found")
+
+    if db.query(ProjectMember).filter(ProjectMember.project_id == project_id).count() <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A project must retain at least one member",
+        )
+    db.delete(membership)
+    db.commit()
+    return None
 
 
 # GET PROJECT MEMBERS

@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -61,6 +62,7 @@ function Login() {
         <p className="login-subtitle">
           Agile Project Management Tool
         </p>
+        {location.state?.message && <p className="success-message">{location.state.message}</p>}
 
         <form onSubmit={handleLogin}>
           <label>Email</label>
@@ -101,6 +103,7 @@ function Login() {
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
+        <p className="login-subtitle login-link">New to AgileFlow? <Link to="/register">Create an account</Link></p>
       </div>
     </div>
   );

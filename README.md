@@ -1,474 +1,119 @@
 # AgileFlow Platform
 
-A full-stack Agile Project Management Tool designed for small teams to manage projects, user stories, tasks, team members, activity history, and notifications through a simple Agile workflow.
+AgileFlow is a full-stack Agile Project Management Tool for a small team. It uses React/Vite, FastAPI, SQLAlchemy, and SQLite to manage **Project → User Story → Task**.
 
-## Table of Contents
+## Features
 
-- [Project Overview](#project-overview)
-- [Key Features](#key-features)
-  - [Authentication & Authorization](#authentication--authorization)
-  - [Project Management](#project-management)
-  - [User Stories](#user-stories)
-  - [Task Management](#task-management)
-  - [Dashboard](#dashboard)
-  - [Search & Filtering](#search--filtering)
-  - [Activity Log](#activity-log)
-  - [Notifications](#notifications)
-- [Asynchronous Workflow](#asynchronous-workflow)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [Project Structure](#project-structure)
-- [API Documentation](#api-documentation)
-- [Local Setup](#local-setup)
-- [Testing](#testing)
-- [Database Schema](#database-schema)
-- [Security Considerations](#security-considerations)
-- [Design Decisions & Tradeoffs](#design-decisions--tradeoffs)
-- [Future Improvements](#future-improvements)
-- [Demo](#demo)
-- [Demo Account](#demo-account)
-- [AI Usage](#ai-usage)
-- [Project Status](#project-status)
+- Registration, login, expiring JWT authentication, and protected frontend routes.
+- Project CRUD, project search/status filtering, and membership-based authorization.
+- Story and task CRUD, validated status/priority values, task assignees, and due dates.
+- Project member add/remove controls; a project retains at least one member.
+- Membership-scoped dashboard and project progress endpoint.
+- Activity history for project, story, and task changes.
+- Recipient-specific in-app assignment notifications processed with FastAPI background tasks.
 
-  
-## Project Overview
+## Work-item states
 
-AgileFlow follows a hierarchical work-management model:
+| Item | Status values | Priority values |
+| --- | --- | --- |
+| Project | `ACTIVE`, `COMPLETED`, `ARCHIVED` | — |
+| User Story | `BACKLOG`, `IN_PROGRESS`, `DONE` | `LOW`, `MEDIUM`, `HIGH` |
+| Task | `TODO`, `IN_PROGRESS`, `DONE` | `LOW`, `MEDIUM`, `HIGH` |
 
-Project → User Story → Task
+Invalid values are rejected by the API.
 
-Users can create and manage projects, organize work into user stories, create and assign tasks, update task status and priority, track project activity, and receive notifications for relevant task events.
+## Async notification workflow
 
-The application is designed with a separate React frontend and FastAPI backend, with SQLite used for persistent storage.
+When a task is assigned, the server persists an in-app notification for the assigned project member and queues one FastAPI background attempt. Delivery validates the task, recipient, story, and project membership. `SENT` means the notification is available in that recipient's authenticated inbox; AgileFlow does not send email or push notifications.
 
-## Key Features
+Failure sets `FAILED`, increments `retry_count`, records `last_attempt_at`, and calculates exponential `next_retry_at`. The recipient can retry until the three-attempt limit. Notification APIs are recipient- and project-membership-scoped.
 
-### Authentication & Authorization
-- User registration and login
-- JWT-based authentication
-- Password hashing
-- Protected frontend routes
-- Protected backend APIs
-- Project membership and task-assignment validation
+## Architecture and API documentation
 
-### Project Management
-- Create, view, update, and delete projects
-- Project status management
-- Project team members
-- Project progress overview
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the architecture, schema, relationships, and security model. FastAPI interactive documentation is at `http://127.0.0.1:8000/docs`.
 
-### User Stories
-- Create, view, update, and delete stories
-- Story status
-- Story priority
-- Stories organized under projects
+## Local setup
 
-### Task Management
-- Create, view, update, and delete tasks
-- Tasks organized under user stories
-- Task status:
-  - TODO
-  - IN_PROGRESS
-  - DONE
-- Task priority:
-  - LOW
-  - MEDIUM
-  - HIGH
-- Assign and unassign tasks to project members
-- Task descriptions and due-date support
-
-### Dashboard
-- Project statistics
-- Story and task counts
-- Completion progress
-- Task status breakdown
-- Task priority breakdown
-- Workspace-level progress information
-
-### Search & Filtering
-- Project search
-- Task status filtering
-- Task priority filtering
-- Task assignee filtering
-- Clear filters
-
-### Activity Log
-The application records important project events such as:
-- Project creation and updates
-- Story creation and updates
-- Task creation
-- Task updates
-- Task assignment changes
-- Task status changes
-
-Activity history is displayed within the project workspace.
-
-### Notifications
-Users receive notifications for relevant task events.
-
-Notifications include:
-- Related task information
-- Related project navigation
-- Processing status
-- Retry information
-- Notification deletion
-
-## Asynchronous Workflow
-
-AgileFlow includes an asynchronous notification workflow.
-
-When a task is created:
-
-Task Creation
-↓
-Notification Created
-↓
-Background Processing
-↓
-SENT / FAILED
-↓
-Retry Handling
-
-The backend uses background processing so notification handling does not block the main task-creation request.
-
-Notification records maintain processing information such as status and retry count. Failures can be tracked and retried according to the implemented notification workflow.
-
-## Tech Stack
-
-### Frontend
-- React
-- Vite
-- React Router
-- Axios
-- CSS
-
-### Backend
-- Python
-- FastAPI
-- SQLAlchemy
-- JWT authentication
-- Password hashing
-- Uvicorn
-
-### Database
-- SQLite
-
-### Testing
-- Pytest
-
-## Architecture
-
-The application follows a separated frontend/backend architecture.
-
-```text
-React Frontend
-      ↓
-REST API
-      ↓
-FastAPI Backend
-      ↓
-SQLAlchemy
-      ↓
-SQLite Database
-```
-
-The main work hierarchy is:
-
-```text
-Project
-   ↓
-User Story
-   ↓
-Task
-```
-
-Supporting relationships include:
-
-```text
-User
-  ↓
-ProjectMember
-  ↓
-Project
-
-Task
-  ↓
-Notification
-
-Project
-  ↓
-ActivityLog
-```
-
-## Project Structure
-
-```text
-agile-project-management-tool/
-│
-├── backend/
-│   ├── app/
-│   │   ├── routes/
-│   │   ├── models/
-│   │   ├── schemas/
-│   │   ├── services/
-│   │   └── main.py
-│   │
-│   ├── tests/
-│   └── requirements.txt
-│
-├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   ├── services/
-│   │   ├── components/
-│   │   └── App.jsx
-│   │
-│   ├── package.json
-│   └── vite.config.js
-│
-└── README.md
-```
-
-## API Documentation
-
-The backend provides interactive API documentation through FastAPI.
-
-When running locally:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-The Swagger UI can be used to explore and test the available REST API endpoints.
-
-## Local Setup
-
-### Prerequisites
-
-* Python 3.11+
-* Node.js and npm
-* Git
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/nikhxxt/agile-project-management-tool.git
-cd agile-project-management-tool
-```
-
-### 2. Backend Setup
+Prerequisites: Python 3.11+, Node.js/npm, and Git.
 
 ```powershell
-cd backend
+Copy-Item .env.example .env
+# Replace JWT_SECRET_KEY with a long random value.
 
+cd backend
 python -m venv venv
 .\venv\Scripts\Activate.ps1
-
 pip install -r requirements.txt
-
-Copy-Item ..\.env.example ..\.env
-# Replace the example value in ..\.env with a long, random JWT secret.
-
 $env:PYTHONPATH = "."
 python -m uvicorn app.main:app
 ```
 
-Backend:
-
-```text
-http://127.0.0.1:8000
-```
-
-API documentation:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-### 3. Frontend Setup
-
-Open another terminal:
+In another terminal:
 
 ```powershell
 cd frontend
-
 npm install
 npm run dev
 ```
 
-Frontend:
-
-```text
-http://localhost:5174
-```
+The frontend is at `http://localhost:5173`; the backend is at `http://127.0.0.1:8000`. Vite forwards `/api` to the backend in development. Existing local SQLite databases receive the additive notification columns at startup; new databases are created automatically.
 
 ## Testing
 
-Run backend tests:
-
 ```powershell
 cd backend
-
 $env:PYTHONPATH = "."
 $env:JWT_SECRET_KEY = "test-only-secret"
 pytest -q
-```
 
-Expected result:
-
-```text
-11 passed
-```
-
-Build the frontend:
-
-```powershell
-cd frontend
+cd ..\frontend
+npm run lint
 npm run build
 ```
 
-## Database Schema
+Tests cover authentication, hierarchy CRUD, membership/dashboard isolation, notification authorization and failure retries, due dates, validation, and project-progress 404 behavior.
 
-The application uses SQLite for persistent storage.
-
-The main entities include:
-
-* User
-* Project
-* ProjectMember
-* UserStory
-* Task
-* Notification
-* ActivityLog
-
-The primary hierarchy is:
+## Repository structure
 
 ```text
-Project
-   │
-   └── UserStory
-          │
-          └── Task
+backend/
+  app/routes/        FastAPI routes
+  app/auth.py        JWT/password helpers
+  app/database.py    SQLAlchemy setup and additive migration
+  app/models.py      SQLAlchemy models
+  app/schemas.py     Pydantic schemas
+  tests/test_api.py
+frontend/
+  src/pages/         Application pages
+  src/services/api.js
+  src/App.jsx
+README.md
+ARCHITECTURE.md
 ```
 
-Project membership connects users with projects, while notifications and activity logs provide supporting workflow and audit information.
+## Security considerations
 
+- Passwords are bcrypt-hashed and API-created accounts require a password.
+- JWTs use `JWT_SECRET_KEY`, expire after 60 minutes, and protect application APIs.
+- Work-item, membership, activity, and progress requests require project membership.
+- Dashboard metrics are limited to accessible projects; notifications are limited to their recipient and current project members.
+- Task assignees must belong to the project.
+- Deploy over HTTPS and use managed secret storage in production.
 
-## Security Considerations
+## Design decisions and tradeoffs
 
-* Passwords are stored as bcrypt hashes; plaintext passwords are not persisted.
-* Authentication uses signed, expiring JWT bearer tokens (HS256). Application-data APIs require a valid token; registration, login, root, and health endpoints are public.
-* Public registration always creates a `member` account. User-management APIs require an authenticated administrator.
-* Project, story, task, activity, and project-member access is limited to project members. Task assignment and reassignment also verify that an assignee belongs to the task's project.
-* `JWT_SECRET_KEY` is read from the environment (or the local, ignored `.env` file) and is never hardcoded. Generate a unique, long random value for each deployment and rotate it if exposed.
-* `.gitignore` excludes virtual environments, environment files, SQLite databases, Python caches, Node modules, and frontend build output.
-* The frontend keeps its bearer token in browser local storage for this SPA. Deploy over HTTPS; the app does not provide cookie-based session protection.
-
-Production deployment should use HTTPS, managed secret storage, and a production-grade database where appropriate.
-
-## Design Decisions & Tradeoffs
-
-### SQLite
-
-SQLite was selected because the assignment targets a small team and SQLite provides simple persistent storage without requiring a separate database server. Local database files are excluded from Git.
-
-For a larger production deployment, PostgreSQL or another production-grade relational database would be more appropriate.
-
-### Authorization Scope
-
-Authorization is based on project membership rather than separate per-project roles. Any project member can manage that project's work and membership, while user-wide administration is reserved for `admin` users. This keeps the assignment focused, at the cost of not having owner/editor/viewer distinctions.
-
-### Token Lifecycle
-
-JWTs expire after 60 minutes and are stateless. This simplifies the application, but there is no server-side token revocation list.
-
-### REST API
-
-REST was selected because the application's operations map naturally to resources such as projects, stories, tasks, users, activities, and notifications.
-
-### React + FastAPI
-
-React provides a component-based frontend suitable for an interactive project-management interface, while FastAPI provides a lightweight Python framework for building documented REST APIs.
-
-### Frontend / Backend Separation
-
-Separating the frontend and backend keeps presentation logic independent from business and persistence logic and allows the API to be tested independently.
-
-### Background Processing
-
-Notification processing is handled asynchronously so notification work does not block the primary task operation.
-
-### Notification Retry Handling
-
-Notification records track processing state and retry information so failures can be identified and handled without silently losing notification events.
-
-## Future Improvements
-
-With additional development time, the application could be extended with:
-
-* Role-based permissions with more granular project roles
-* Advanced reporting and analytics
-* Kanban-style task visualization
-* Email or push notifications
-* Improved notification retry infrastructure
-* PostgreSQL for larger deployments
-* Automated CI/CD
-* More comprehensive automated frontend testing
-* Enhanced audit and monitoring capabilities
-
-## Demo
-
-### Demo Application
-
-The deployed application URL:
-
-```text
-<DEMO_URL>
-```
-
-### Walkthrough Video
-
-The walkthrough video link:
-
-```text
-<VIDEO_URL>
-```
-
-## Demo Account
-
-Use the following demo credentials to explore the application:
-
-```text
-Email: demo4@example.com
-Password: demo123
-```
-
-Do not commit real production credentials to the repository.
+SQLite suits a small team and simple local setup. Background tasks keep in-app notification validation off the task request path, but are process-local; production should use a durable queue and scheduler. Membership is deliberately flat: any current member can manage a project's work and membership instead of using project roles.
 
 ## AI Usage
 
-AI tools were used during development as a development assistant for:
+AI tooling was used as a development aid for implementation, review, documentation, and testing. The resulting behavior and changes were reviewed and verified by the developer.
 
-- Debugging errors and resolving implementation issues
-- Reviewing API and frontend integration
-- Improving UI structure and styling
-- Assisting with database and architecture decisions
-- Supporting documentation and README preparation
-- Reviewing testing and security considerations
+## With more time
 
-All AI-generated suggestions were reviewed, tested, and adapted based on the application's actual requirements and implementation. The final implementation, testing, and integration decisions were verified by the developer.
+- Durable queue and scheduled notification retries.
+- Project roles and invitation emails.
+- Pagination, CI/CD, PostgreSQL, and broader frontend integration/accessibility tests.
 
-## Project Status
+## Demo
 
-The application implements the core requirements of the Agile Project Management Tool assignment, including:
-
-* Full-stack frontend and backend
-* Persistent SQLite storage
-* Project → User Story → Task hierarchy
-* CRUD operations
-* Task assignment and organization
-* Authentication and authorization
-* Activity logging
-* Asynchronous notifications
-* API documentation
-* Automated backend tests
+There is currently no hosted demo or walkthrough video.
