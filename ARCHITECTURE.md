@@ -1,4 +1,3 @@
-````md
 # AgileFlow Architecture and Database Schema
 
 ## System architecture
@@ -176,5 +175,3 @@ FastAPI documents request/response formats at `/docs`.
 
 SQLite and process-local background tasks suit a small-team assignment and simple local setup. The notification model persists state and retry metadata, but a production system should replace the background task with a durable queue plus a scheduler. Authorization uses flat project membership instead of per-project roles to keep the scope focused.
 
-```
-```
