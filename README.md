@@ -27,6 +27,7 @@ A full-stack Agile Project Management Tool designed for small teams to manage pr
 - [Future Improvements](#future-improvements)
 - [Demo](#demo)
 - [Demo Account](#demo-account)
+- [AI Usage](#ai-usage)
 - [Project Status](#project-status)
 
   
@@ -443,6 +444,19 @@ Password: demo123
 ```
 
 Do not commit real production credentials to the repository.
+
+## AI Usage
+
+AI tools were used during development as a development assistant for:
+
+- Debugging errors and resolving implementation issues
+- Reviewing API and frontend integration
+- Improving UI structure and styling
+- Assisting with database and architecture decisions
+- Supporting documentation and README preparation
+- Reviewing testing and security considerations
+
+All AI-generated suggestions were reviewed, tested, and adapted based on the application's actual requirements and implementation. The final implementation, testing, and integration decisions were verified by the developer.
 
 ## Project Status
 
