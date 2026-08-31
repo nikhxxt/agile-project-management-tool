@@ -53,6 +53,29 @@ Task assignment
 
 This is an in-app notification workflow, not an email or push integration. Each invocation performs one attempt. A failed notification can be manually processed again by its recipient until `MAX_NOTIFICATION_ATTEMPTS` (3) is reached. `next_retry_at` uses exponential seconds (`2^retry_count`) as retry tracking; no scheduler is currently included, so retry initiation is user-driven.
 
+## Entity-Relationship Diagram
+
+The database relationships are:
+
+```text
+User
+ │
+ ├── * ProjectMember * ── 1 Project
+ │                         │
+ │                         └── * UserStory
+ │                                │
+ │                                └── * Task
+ │                                      │
+ │                                      └── * Notification
+ │
+ ├── * Task (optional assignee)
+ │
+ └── * Notification (recipient)
+
+Project
+ └── * ActivityLog
+
+
 ## Database tables
 
 ### `users`
