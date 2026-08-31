@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import "./Dashboard.css";
 
 const label = (value) => value.replaceAll("_", " ");
 
@@ -8,11 +9,44 @@ function Dashboard() {
   const navigate = useNavigate();
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState("");
-  useEffect(() => { api.get("/dashboard/summary").then(({ data }) => setSummary(data)).catch((err) => setError(err.response?.data?.detail || "Failed to load dashboard")); }, []);
-  if (error) return <div className="page"><div className="page-header"><div><p className="eyebrow">Workspace intelligence</p><h1>Dashboard</h1></div></div><p className="notice">{error}</p></div>;
+
+  useEffect(() => {
+    api.get("/dashboard/summary")
+      .then(({ data }) => setSummary(data))
+      .catch((err) => setError(err.response?.data?.detail || "Failed to load dashboard"));
+  }, []);
+
+  if (error) {
+    return <div className="page"><div className="page-header"><div><p className="eyebrow">Workspace intelligence</p><h1>Dashboard</h1></div></div><p className="notice">{error}</p></div>;
+  }
+
   if (!summary) return <div className="page loading-state">Loading your workspace…</div>;
+
   const completion = Number(summary.completion_percentage) || 0;
-  const cards = [[summary.total_projects,"Projects"],[summary.total_stories,"Stories"],[summary.total_tasks,"Tasks"],[summary.completed_tasks,"Completed"],[`${completion}%`,"Velocity"]];
-  return <div className="page"><header className="page-header"><div><p className="eyebrow">Workspace intelligence</p><h1>Good work starts with clarity.</h1><p className="page-subtitle">A live view of the projects, stories, and tasks moving your team forward.</p></div></header><section className="shortcut-grid"><button className="card shortcut-card" onClick={()=>navigate("/projects")}><span>◇</span><strong>Open projects</strong><small>Create and manage projects, stories, and tasks.</small></button><button className="card shortcut-card" onClick={()=>navigate("/notifications")}><span>●</span><strong>Review notifications</strong><small>Open the event inbox and follow updates to work.</small></button></section><section className="kpi-grid">{cards.map(([value,name]) => <div className="card kpi-card" key={name}><strong>{value}</strong><span>{name}</span></div>)}</section><section className="dashboard-grid"><div className="card panel"><div className="section-heading"><div><p className="eyebrow">Delivery pace</p><h2>Overall progress</h2></div><span className="badge status-in_progress">{completion}% complete</span></div><div className="progress-track"><div className="progress-fill" style={{ width: `${Math.min(completion, 100)}%` }} /></div><p className="muted" style={{ marginTop: 14 }}>{summary.completed_tasks} of {summary.total_tasks} tasks are complete across the workspace.</p></div><div className="card panel"><p className="eyebrow">At a glance</p><h2>Work summary</h2><p className="muted">{summary.total_tasks ? `${summary.total_projects} projects are currently tracking ${summary.total_stories} stories.` : "Start by opening Projects and creating your first project."}</p></div><div className="card panel"><div className="section-heading"><h2>Tasks by status</h2></div><div className="metric-list">{Object.entries(summary.tasks_by_status || {}).length ? Object.entries(summary.tasks_by_status).map(([status,count]) => <div className="metric-row" key={status}><strong className={`badge status-${status.toLowerCase()}`}>{label(status)}</strong><span>{count} task{count === 1 ? "" : "s"}</span></div>) : <p className="muted">No task status data yet.</p>}</div></div><div className="card panel"><div className="section-heading"><h2>Priority mix</h2></div><div className="metric-list">{Object.entries(summary.tasks_by_priority || {}).length ? Object.entries(summary.tasks_by_priority).map(([priority,count]) => <div className="metric-row" key={priority}><strong className={`badge priority-${priority.toLowerCase()}`}>{priority}</strong><span>{count} task{count === 1 ? "" : "s"}</span></div>) : <p className="muted">No priority data yet.</p>}</div></div></section></div>;
+  const cards = [
+    [summary.total_projects, "Projects"],
+    [summary.total_stories, "Stories"],
+    [summary.total_tasks, "Tasks"],
+    [summary.completed_tasks, "Completed"],
+    [`${completion}%`, "Velocity"],
+  ];
+
+  return <div className="page">
+    <header className="page-header"><div><p className="eyebrow">Workspace intelligence</p><h1>Good work starts with clarity.</h1><p className="page-subtitle">A live view of the projects, stories, and tasks moving your team forward.</p></div></header>
+    <section className="shortcut-grid">
+      <button className="card shortcut-card" onClick={() => navigate("/projects")}><span>◇</span><strong>Open projects</strong><small>Create and manage projects, stories, and tasks.</small></button>
+      <button className="card shortcut-card" onClick={() => navigate("/notifications")}><span>●</span><strong>Review notifications</strong><small>Open the event inbox and follow updates to work.</small></button>
+    </section>
+    <section className="kpi-grid">
+      {cards.map(([value, name]) => <button type="button" className="card kpi-card kpi-card-link" key={name} onClick={() => navigate("/projects")} aria-label={`View projects for ${name}`}><strong>{value}</strong><span>{name}</span></button>)}
+    </section>
+    <section className="dashboard-grid">
+      <div className="card panel"><div className="section-heading"><div><p className="eyebrow">Delivery pace</p><h2>Overall progress</h2></div><span className="badge status-in_progress">{completion}% complete</span></div><div className="progress-track"><div className="progress-fill" style={{ width: `${Math.min(completion, 100)}%` }} /></div><p className="muted" style={{ marginTop: 14 }}>{summary.completed_tasks} of {summary.total_tasks} tasks are complete across the workspace.</p></div>
+      <div className="card panel"><p className="eyebrow">At a glance</p><h2>Work summary</h2><p className="muted">{summary.total_tasks ? `${summary.total_projects} projects are currently tracking ${summary.total_stories} stories.` : "Start by opening Projects and creating your first project."}</p></div>
+      <div className="card panel"><div className="section-heading"><h2>Tasks by status</h2></div><div className="metric-list">{Object.entries(summary.tasks_by_status || {}).length ? Object.entries(summary.tasks_by_status).map(([status, count]) => <div className="metric-row" key={status}><strong className={`badge status-${status.toLowerCase()}`}>{label(status)}</strong><span>{count} task{count === 1 ? "" : "s"}</span></div>) : <p className="muted">No task status data yet.</p>}</div></div>
+      <div className="card panel"><div className="section-heading"><h2>Priority mix</h2></div><div className="metric-list">{Object.entries(summary.tasks_by_priority || {}).length ? Object.entries(summary.tasks_by_priority).map(([priority, count]) => <div className="metric-row" key={priority}><strong className={`badge priority-${priority.toLowerCase()}`}>{priority}</strong><span>{count} task{count === 1 ? "" : "s"}</span></div>) : <p className="muted">No priority data yet.</p>}</div></div>
+    </section>
+  </div>;
 }
+
 export default Dashboard;

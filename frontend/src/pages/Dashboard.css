@@ -1,0 +1,20 @@
+.kpi-card-link {
+  width: 100%;
+  appearance: none;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.kpi-card-link:hover {
+  border-color: #62434a;
+  transform: translateY(-2px);
+  background: #2a2024;
+  box-shadow: 0 22px 42px #0006;
+}
+
+.kpi-card-link:focus-visible {
+  outline: 2px solid #ef5962;
+  outline-offset: 3px;
+}
