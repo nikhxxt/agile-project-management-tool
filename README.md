@@ -169,9 +169,11 @@ FastAPI Backend
 SQLAlchemy
       ↓
 SQLite Database
+```
 
 The main work hierarchy is:
 
+```text
 Project
    ↓
 User Story
