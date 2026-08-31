@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from .database import Base, engine
 from . import models
-from .routes import projects
+from .routes import projects, stories
 
 Base.metadata.create_all(bind=engine)
 
@@ -12,8 +12,8 @@ app = FastAPI(
     version="1.0.0",
 )
 
-
 app.include_router(projects.router)
+app.include_router(stories.router)
 
 
 @app.get("/")
