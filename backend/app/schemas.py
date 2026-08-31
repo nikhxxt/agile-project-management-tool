@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # -------------------------
@@ -9,9 +9,19 @@ from pydantic import BaseModel, ConfigDict
 # -------------------------
 
 class UserCreate(BaseModel):
-    name: str
-    email: str
-    password: Optional[str] = None
+    name: str = Field(
+        min_length=2,
+        max_length=100
+    )
+    email: str = Field(
+        min_length=5,
+        max_length=150
+    )
+    password: Optional[str] = Field(
+        default=None,
+        min_length=6,
+        max_length=100
+    )
     role: str = "member"
 
 
@@ -22,7 +32,9 @@ class UserResponse(BaseModel):
     role: str
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 
 # -------------------------
@@ -30,12 +42,19 @@ class UserResponse(BaseModel):
 # -------------------------
 
 class ProjectCreate(BaseModel):
-    name: str
+    name: str = Field(
+        min_length=2,
+        max_length=150
+    )
     description: Optional[str] = None
 
 
 class ProjectUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=150
+    )
     description: Optional[str] = None
     status: Optional[str] = None
 
@@ -48,7 +67,9 @@ class ProjectResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 
 # -------------------------
@@ -56,14 +77,21 @@ class ProjectResponse(BaseModel):
 # -------------------------
 
 class StoryCreate(BaseModel):
-    title: str
+    title: str = Field(
+        min_length=2,
+        max_length=200
+    )
     description: Optional[str] = None
     status: str = "BACKLOG"
     priority: str = "MEDIUM"
 
 
 class StoryUpdate(BaseModel):
-    title: Optional[str] = None
+    title: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=200
+    )
     description: Optional[str] = None
     status: Optional[str] = None
     priority: Optional[str] = None
@@ -79,7 +107,9 @@ class StoryResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 
 # -------------------------
@@ -87,7 +117,10 @@ class StoryResponse(BaseModel):
 # -------------------------
 
 class TaskCreate(BaseModel):
-    title: str
+    title: str = Field(
+        min_length=2,
+        max_length=200
+    )
     description: Optional[str] = None
     status: str = "TODO"
     priority: str = "MEDIUM"
@@ -96,7 +129,11 @@ class TaskCreate(BaseModel):
 
 
 class TaskUpdate(BaseModel):
-    title: Optional[str] = None
+    title: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=200
+    )
     description: Optional[str] = None
     status: Optional[str] = None
     priority: Optional[str] = None
@@ -116,7 +153,9 @@ class TaskResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 
 # -------------------------
@@ -131,7 +170,9 @@ class NotificationResponse(BaseModel):
     retry_count: int
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 
 # -------------------------
@@ -148,4 +189,6 @@ class ActivityLogResponse(BaseModel):
     details: Optional[str]
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True
+    )
