@@ -2,6 +2,35 @@
 
 A full-stack Agile Project Management Tool designed for small teams to manage projects, user stories, tasks, team members, activity history, and notifications through a simple Agile workflow.
 
+## Table of Contents
+
+- [Project Overview](#project-overview)
+- [Key Features](#key-features)
+  - [Authentication & Authorization](#authentication--authorization)
+  - [Project Management](#project-management)
+  - [User Stories](#user-stories)
+  - [Task Management](#task-management)
+  - [Dashboard](#dashboard)
+  - [Search & Filtering](#search--filtering)
+  - [Activity Log](#activity-log)
+  - [Notifications](#notifications)
+- [Asynchronous Workflow](#asynchronous-workflow)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [API Documentation](#api-documentation)
+- [Local Setup](#local-setup)
+- [Testing](#testing)
+- [Database Schema](#database-schema)
+- [Security Considerations](#security-considerations)
+- [Design Decisions & Tradeoffs](#design-decisions--tradeoffs)
+- [AI Usage](#ai-usage)
+- [Future Improvements](#future-improvements)
+- [Demo](#demo)
+- [Demo Account](#demo-account)
+- [Project Status](#project-status)
+
+  
 ## Project Overview
 
 AgileFlow follows a hierarchical work-management model:
