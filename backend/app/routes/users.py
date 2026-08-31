@@ -75,6 +75,36 @@ def get_users(
     ).all()
 
 
+# GET PROJECT MEMBERS
+@router.get(
+    "/projects/{project_id}/members",
+    response_model=list[UserResponse]
+)
+def get_project_members(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    project = db.query(Project).filter(
+        Project.id == project_id
+    ).first()
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+
+    require_project_membership(db, project_id, current_user)
+
+    return (
+        db.query(User)
+        .join(ProjectMember)
+        .filter(ProjectMember.project_id == project_id)
+        .all()
+    )
+
+
 # GET SINGLE USER
 @router.get(
     "/{user_id}",
@@ -194,36 +224,3 @@ def remove_user_from_project(
     db.commit()
     return None
 
-
-# GET PROJECT MEMBERS
-@router.get(
-    "/projects/{project_id}/members",
-    response_model=list[UserResponse]
-)
-def get_project_members(
-    project_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    project = db.query(Project).filter(
-        Project.id == project_id
-    ).first()
-
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found"
-        )
-
-    require_project_membership(db, project_id, current_user)
-
-    members = (
-        db.query(User)
-        .join(ProjectMember)
-        .filter(
-            ProjectMember.project_id == project_id
-        )
-        .all()
-    )
-
-    return members

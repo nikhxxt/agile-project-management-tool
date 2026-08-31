@@ -27,14 +27,20 @@ function ProjectDetails() {
 
   const loadProject = useCallback(async () => {
     try {
-      const [projectResponse, storyResponse, memberResponse, userResponse, activityResponse] = await Promise.all([
+      const [projectResponse, storyResponse] = await Promise.all([
         api.get(`/projects/${projectId}`), api.get(`/projects/${projectId}/stories`),
-        api.get(`/users/projects/${projectId}/members`), api.get(`/projects/${projectId}/eligible-users`),
+      ]);
+      const [memberResult, eligibleResult, activityResult] = await Promise.allSettled([
+        api.get(`/users/projects/${projectId}/members`),
+        api.get(`/projects/${projectId}/eligible-users`),
         api.get(`/activity/projects/${projectId}`),
       ]);
       const taskPairs = await Promise.all(storyResponse.data.map(async (story) => [story.id, (await api.get(`/stories/${story.id}/tasks`)).data]));
-      setProject(projectResponse.data); setStories(storyResponse.data); setMembers(memberResponse.data);
-      setEligibleUsers(userResponse.data); setActivities(activityResponse.data); setTasks(Object.fromEntries(taskPairs)); setError("");
+      setProject(projectResponse.data); setStories(storyResponse.data);
+      setMembers(memberResult.status === "fulfilled" ? memberResult.value.data : []);
+      setEligibleUsers(eligibleResult.status === "fulfilled" ? eligibleResult.value.data : []);
+      setActivities(activityResult.status === "fulfilled" ? activityResult.value.data : []);
+      setTasks(Object.fromEntries(taskPairs)); setError("");
     } catch (err) { setError(err.response?.data?.detail || "Failed to load project"); }
     finally { setLoading(false); }
   }, [projectId]);
