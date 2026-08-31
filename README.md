@@ -415,8 +415,8 @@ Add the walkthrough video link here if available:
 If a dedicated demo account is provided:
 
 ```text
-Email: <DEMO_EMAIL>
-Password: <DEMO_PASSWORD>
+Email: demo4@example.com
+Password: demo123
 ```
 
 Do not commit real production credentials to the repository.
