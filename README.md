@@ -425,7 +425,7 @@ With additional development time, the application could be extended with:
 
 ### Demo Application
 
-Add the deployed application URL here if available:
+The deployed application URL:
 
 ```text
 <DEMO_URL>
@@ -433,7 +433,7 @@ Add the deployed application URL here if available:
 
 ### Walkthrough Video
 
-Add the walkthrough video link here if available:
+The walkthrough video link:
 
 ```text
 <VIDEO_URL>
@@ -441,7 +441,7 @@ Add the walkthrough video link here if available:
 
 ## Demo Account
 
-If a dedicated demo account is provided:
+Use the following demo credentials to explore the application:
 
 ```text
 Email: demo4@example.com
