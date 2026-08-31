@@ -169,7 +169,6 @@ FastAPI Backend
 SQLAlchemy
       ↓
 SQLite Database
-````
 
 The main work hierarchy is:
 
