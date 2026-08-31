@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from ..activity_logger import log_activity
+from ..auth import get_current_user
 from ..database import get_db
 from ..models import UserStory, Task, User, ProjectMember
 from ..schemas import TaskCreate, TaskUpdate, TaskResponse
@@ -19,9 +21,9 @@ router = APIRouter(
 def create_task(
     story_id: int,
     task: TaskCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    # Check whether the user story exists
     story = db.query(UserStory).filter(
         UserStory.id == story_id
     ).first()
@@ -32,7 +34,6 @@ def create_task(
             detail="User story not found"
         )
 
-    # Validate assignee if provided
     if task.assigned_to is not None:
         user = db.query(User).filter(
             User.id == task.assigned_to
@@ -44,12 +45,9 @@ def create_task(
                 detail="Assigned user not found"
             )
 
-        # Get the project through the story
-        project_id = story.project_id
-
         membership = db.query(ProjectMember).filter(
             ProjectMember.user_id == task.assigned_to,
-            ProjectMember.project_id == project_id
+            ProjectMember.project_id == story.project_id
         ).first()
 
         if not membership:
@@ -69,6 +67,32 @@ def create_task(
     )
 
     db.add(new_task)
+    db.flush()
+
+    log_activity(
+        db,
+        user_id=current_user.id,
+        project_id=story.project_id,
+        action="CREATE",
+        entity_type="TASK",
+        entity_id=new_task.id,
+        details=f"Created task '{new_task.title}'"
+    )
+
+    if new_task.assigned_to is not None:
+        log_activity(
+            db,
+            user_id=current_user.id,
+            project_id=story.project_id,
+            action="ASSIGN",
+            entity_type="TASK",
+            entity_id=new_task.id,
+            details=(
+                f"Assigned task '{new_task.title}' "
+                f"to user {new_task.assigned_to}"
+            )
+        )
+
     db.commit()
     db.refresh(new_task)
 
@@ -129,7 +153,8 @@ def get_task(
 def update_task(
     task_id: int,
     task_data: TaskUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     task = db.query(Task).filter(
         Task.id == task_id
@@ -141,42 +166,112 @@ def update_task(
             detail="Task not found"
         )
 
-    # If changing the assignee, validate the new user
-    if task_data.assigned_to is not None:
+    story = db.query(UserStory).filter(
+        UserStory.id == task.user_story_id
+    ).first()
 
-        user = db.query(User).filter(
-            User.id == task_data.assigned_to
-        ).first()
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Assigned user not found"
-            )
-
-        # Find the project through:
-        # Task → User Story → Project
-        story = db.query(UserStory).filter(
-            UserStory.id == task.user_story_id
-        ).first()
-
-        membership = db.query(ProjectMember).filter(
-            ProjectMember.user_id == task_data.assigned_to,
-            ProjectMember.project_id == story.project_id
-        ).first()
-
-        if not membership:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User is not a member of this project"
-            )
+    old_status = task.status
+    old_assignee = task.assigned_to
 
     update_data = task_data.model_dump(
         exclude_unset=True
     )
 
+    # Validate new assignee only when assigned_to is supplied
+    if "assigned_to" in update_data:
+        new_assignee = update_data["assigned_to"]
+
+        if new_assignee is not None:
+            user = db.query(User).filter(
+                User.id == new_assignee
+            ).first()
+
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Assigned user not found"
+                )
+
+            membership = db.query(ProjectMember).filter(
+                ProjectMember.user_id == new_assignee,
+                ProjectMember.project_id == story.project_id
+            ).first()
+
+            if not membership:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="User is not a member of this project"
+                )
+
+    changes = []
+
     for key, value in update_data.items():
+        old_value = getattr(task, key)
+
+        if old_value != value:
+            changes.append(
+                f"{key}: '{old_value}' -> '{value}'"
+            )
+
         setattr(task, key, value)
+
+    # General UPDATE activity
+    if changes:
+        log_activity(
+            db,
+            user_id=current_user.id,
+            project_id=story.project_id,
+            action="UPDATE",
+            entity_type="TASK",
+            entity_id=task.id,
+            details=(
+                f"Updated task '{task.title}': "
+                + ", ".join(changes)
+            )
+        )
+
+    # Assignment activity
+    if (
+        "assigned_to" in update_data
+        and old_assignee != task.assigned_to
+    ):
+        if task.assigned_to is None:
+            assignment_details = (
+                f"Unassigned task '{task.title}'"
+            )
+        else:
+            assignment_details = (
+                f"Assigned task '{task.title}' "
+                f"to user {task.assigned_to}"
+            )
+
+        log_activity(
+            db,
+            user_id=current_user.id,
+            project_id=story.project_id,
+            action="ASSIGN",
+            entity_type="TASK",
+            entity_id=task.id,
+            details=assignment_details
+        )
+
+    # Status change activity
+    if (
+        "status" in update_data
+        and old_status != task.status
+    ):
+        log_activity(
+            db,
+            user_id=current_user.id,
+            project_id=story.project_id,
+            action="STATUS_CHANGE",
+            entity_type="TASK",
+            entity_id=task.id,
+            details=(
+                f"Task '{task.title}' status changed "
+                f"from '{old_status}' to '{task.status}'"
+            )
+        )
 
     db.commit()
     db.refresh(task)
@@ -191,7 +286,8 @@ def update_task(
 )
 def delete_task(
     task_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     task = db.query(Task).filter(
         Task.id == task_id
@@ -202,6 +298,24 @@ def delete_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found"
         )
+
+    story = db.query(UserStory).filter(
+        UserStory.id == task.user_story_id
+    ).first()
+
+    project_id = story.project_id
+    task_id_value = task.id
+    task_title = task.title
+
+    log_activity(
+        db,
+        user_id=current_user.id,
+        project_id=project_id,
+        action="DELETE",
+        entity_type="TASK",
+        entity_id=task_id_value,
+        details=f"Deleted task '{task_title}'"
+    )
 
     db.delete(task)
     db.commit()
