@@ -31,21 +31,16 @@ def create_project(
     )
 
     db.add(new_project)
-    db.commit()
-    db.refresh(new_project)
+    db.flush()
 
-    # Automatically add the creator as a project member
     membership = ProjectMember(
         user_id=current_user.id,
         project_id=new_project.id
     )
-
     db.add(membership)
-    db.commit()
 
-    # Record project creation
     log_activity(
-        db=db,
+        db,
         user_id=current_user.id,
         project_id=new_project.id,
         action="CREATE",
@@ -53,6 +48,9 @@ def create_project(
         entity_id=new_project.id,
         details=f"Created project '{new_project.name}'"
     )
+
+    db.commit()
+    db.refresh(new_project)
 
     return new_project
 
@@ -132,6 +130,7 @@ def update_project(
         entity_id=project.id,
         details=f"Updated project '{project.name}'"
     )
+    db.commit()
 
     return project
 
@@ -159,7 +158,6 @@ def delete_project(
     project_name = project.name
     project_id_value = project.id
 
-    # Record deletion before deleting the project
     log_activity(
         db=db,
         user_id=current_user.id,

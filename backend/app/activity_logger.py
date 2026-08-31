@@ -20,8 +20,6 @@ def log_activity(
         entity_id=entity_id,
         details=details,
     )
-
     db.add(activity)
-    db.commit()
-
+    db.flush()
     return activity
