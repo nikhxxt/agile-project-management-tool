@@ -223,7 +223,7 @@ The Swagger UI can be used to explore and test the available REST API endpoints.
 ### 1. Clone the Repository
 
 ```bash
-git clone <GITHUB_REPOSITORY_URL>
+git clone <[GITHUB_REPOSITORY_URL](https://github.com/nikhxxt/agile-project-management-tool>
 cd agile-project-management-tool
 ```
 
