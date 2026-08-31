@@ -394,13 +394,181 @@ This provides visibility into changes made within a project.
 
 ---
 
-## 16. Primary Keys and Foreign Keys
+## 16. Database Tables, Fields, Primary Keys and Foreign Keys
 
-Each main entity is identified by a primary key.
+The following schema reflects the SQLAlchemy models used by the application.
 
-Foreign keys establish relationships between related records.
+### Users
 
-The key relationships are:
+| Field | Type | Key | Nullable | Description |
+|---|---|---|---|---|
+| id | Integer | PK | No | Unique user identifier |
+| name | String(100) | — | No | User name |
+| email | String(150) | Unique | No | User email address |
+| password_hash | String(255) | — | Yes | Hashed password |
+| role | String(20) | — | Yes | User role, default `member` |
+| created_at | DateTime | — | Yes | Account creation timestamp |
+
+### Projects
+
+| Field | Type | Key | Nullable | Description |
+|---|---|---|---|---|
+| id | Integer | PK | No | Unique project identifier |
+| name | String(150) | — | No | Project name |
+| description | Text | — | Yes | Project description |
+| status | String(30) | — | Yes | Project status, default `ACTIVE` |
+| created_at | DateTime | — | Yes | Project creation timestamp |
+| updated_at | DateTime | — | Yes | Last update timestamp |
+
+### Project Members
+
+| Field | Type | Key | Nullable | Description |
+|---|---|---|---|---|
+| id | Integer | PK | No | Unique membership identifier |
+| project_id | Integer | FK → projects.id | No | Associated project |
+| user_id | Integer | FK → users.id | No | Associated user |
+
+`project_id` and `user_id` use cascading deletion with their parent records.
+
+### User Stories
+
+| Field | Type | Key | Nullable | Description |
+|---|---|---|---|---|
+| id | Integer | PK | No | Unique story identifier |
+| project_id | Integer | FK → projects.id | No | Parent project |
+| title | String(200) | — | No | Story title |
+| description | Text | — | Yes | Story description |
+| status | String(30) | — | Yes | Story status, default `BACKLOG` |
+| priority | String(20) | — | Yes | Story priority, default `MEDIUM` |
+| created_at | DateTime | — | Yes | Story creation timestamp |
+| updated_at | DateTime | — | Yes | Last update timestamp |
+
+### Tasks
+
+| Field | Type | Key | Nullable | Description |
+|---|---|---|---|---|
+| id | Integer | PK | No | Unique task identifier |
+| user_story_id | Integer | FK → user_stories.id | No | Parent user story |
+| title | String(200) | — | No | Task title |
+| description | Text | — | Yes | Task description |
+| status | String(30) | — | Yes | Task status, default `TODO` |
+| priority | String(20) | — | Yes | Task priority, default `MEDIUM` |
+| assigned_to | Integer | FK → users.id | Yes | Assigned user |
+| due_date | Date | — | Yes | Task due date |
+| created_at | DateTime | — | Yes | Task creation timestamp |
+| updated_at | DateTime | — | Yes | Last update timestamp |
+
+A task may remain unassigned because `assigned_to` is nullable.
+
+### Notifications
+
+| Field | Type | Key | Nullable | Description |
+|---|---|---|---|---|
+| id | Integer | PK | No | Unique notification identifier |
+| task_id | Integer | FK → tasks.id | No | Related task |
+| message | Text | — | No | Notification message |
+| status | String(30) | — | Yes | Processing status, default `PENDING` |
+| retry_count | Integer | — | Yes | Number of processing retries, default `0` |
+| created_at | DateTime | — | Yes | Notification creation timestamp |
+
+`task_id` uses cascading deletion when its associated task is deleted.
+
+### Activity Logs
+
+| Field | Type | Key | Nullable | Description |
+|---|---|---|---|---|
+| id | Integer | PK | No | Unique activity identifier |
+| user_id | Integer | FK → users.id | Yes | User who performed the action |
+| project_id | Integer | FK → projects.id | Yes | Related project |
+| action | String(100) | — | No | Action performed |
+| entity_type | String(50) | — | No | Type of entity affected |
+| entity_id | Integer | — | Yes | Identifier of affected entity |
+| details | Text | — | Yes | Additional activity information |
+| created_at | DateTime | — | Yes | Activity timestamp |
+
+`user_id` and `project_id` are nullable because an activity record may not always require a directly associated user or project.
+
+---
+
+## 17. Foreign Key Relationships
+
+The database relationships are:
+
+| Child Table | Foreign Key | Parent Table | Relationship |
+|---|---|---|---|
+| project_members | project_id | projects.id | Project membership belongs to a project |
+| project_members | user_id | users.id | Project membership belongs to a user |
+| user_stories | project_id | projects.id | Story belongs to a project |
+| tasks | user_story_id | user_stories.id | Task belongs to a story |
+| tasks | assigned_to | users.id | Task can be assigned to a user |
+| notifications | task_id | tasks.id | Notification belongs to a task |
+| activity_logs | user_id | users.id | Activity can reference the acting user |
+| activity_logs | project_id | projects.id | Activity can reference a project |
+
+---
+
+## 18. Relationship Cardinality
+
+The main relationships can be summarized as:
+
+```text
+User 1 ──────── * ProjectMember * ──────── 1 Project
+
+Project 1 ───── * UserStory
+
+UserStory 1 ─── * Task
+
+User 1 ──────── * Task
+                 (assignment)
+
+Task 1 ──────── * Notification
+
+User 1 ──────── * ActivityLog
+                 (optional)
+
+Project 1 ───── * ActivityLog
+                 (optional)
+````
+
+This results in the core hierarchy:
+
+```text
+Project
+   │
+   └── UserStory
+          │
+          └── Task
+                 │
+                 └── Notification
+```
+
+while users connect to projects through `ProjectMember` and can also be assigned tasks and associated with activity records.
+
+---
+
+## 19. Cascade and Optional Relationships
+
+The database uses cascading deletion for several parent-child relationships.
+
+When a project is deleted, its project memberships and user stories are configured to be removed with the project.
+
+When a user story is deleted, its associated tasks are configured to be removed with the story.
+
+When a task is deleted, its associated notifications are configured to be removed with the task.
+
+Some relationships are intentionally optional:
+
+* `Task.assigned_to` may be null for unassigned tasks.
+* `ActivityLog.user_id` may be null.
+* `ActivityLog.project_id` may be null.
+* `ActivityLog.entity_id` may be null.
+* `User.password_hash` may be null.
+
+---
+
+## 20. Database Design Summary
+
+The relational database is centered around the project management hierarchy:
 
 ```text
 Project
@@ -410,160 +578,29 @@ UserStory
 Task
 ```
 
+Additional tables support:
+
 ```text
 User
-   ↓
+  ↓
 ProjectMember
-   ↓
+  ↓
 Project
 ```
+
+and:
 
 ```text
 Task
-   ↓
+  ↓
 Notification
 ```
 
+and:
+
 ```text
 Project
-   ↓
+  ↓
 ActivityLog
 ```
-
-The exact database column definitions are maintained in the backend SQLAlchemy models.
-
----
-
-## 17. Data Integrity
-
-The relational structure maintains the association between parent and child work items.
-
-For example:
-
-* A user story belongs to a project.
-* A task belongs to a user story.
-* A project member connects a user with a project.
-* A task assignment references a user.
-* A notification references task-related activity.
-* An activity log records project activity.
-
-Backend validation is used to ensure that protected operations are performed only against valid and authorized project resources.
-
----
-
-## 18. Asynchronous Notification Workflow
-
-The notification system uses background processing.
-
-```text
-User creates task
-       ↓
-Task saved to database
-       ↓
-Notification created
-       ↓
-Background processing
-       ↓
-Notification status updated
-       ↓
-SENT / FAILED
-```
-
-This design keeps notification processing separate from the main task creation flow.
-
-If notification processing encounters a failure, the notification record retains processing information such as its status and retry count.
-
----
-
-## 19. API and Database Interaction
-
-The backend acts as the main application layer between the frontend and database.
-
-```text
-React
-  ↓
-HTTP Request
-  ↓
-FastAPI Route
-  ↓
-Authentication / Authorization
-  ↓
-Business Logic
-  ↓
-SQLAlchemy
-  ↓
-SQLite
-  ↓
-Response
-  ↓
-React
-```
-
-This keeps database access inside the backend rather than exposing the database directly to the frontend.
-
----
-
-## 20. Design Considerations
-
-### SQLite
-
-SQLite was selected because the assignment targets a small team and SQLite provides persistent relational storage without requiring a separate database server.
-
-For a larger production deployment, PostgreSQL or another production-grade relational database would be more suitable.
-
-### Relational Model
-
-A relational database is appropriate because the application contains clear relationships between users, projects, stories, tasks, notifications, and activity records.
-
-### Separation of Responsibilities
-
-The frontend is responsible for presentation and user interaction.
-
-The backend is responsible for:
-
-* Authentication
-* Authorization
-* Business logic
-* Database operations
-* Activity logging
-* Notification processing
-
-This separation improves maintainability and makes the system easier to extend.
-
----
-
-## 21. Summary
-
-AgileFlow is structured around the following core model:
-
-```text
-User
- │
- ├── ProjectMember
- │        │
- │        ▼
- │      Project
- │        │
- │        ▼
- │     UserStory
- │        │
- │        ▼
- │       Task
- │        │
- │        ▼
- │   Notification
- │
- └────────────── Activity / Project Access
-```
-
-The architecture and database design support the application's primary requirements:
-
-* Small-team project management
-* Project → User Story → Task hierarchy
-* User and project relationships
-* Task assignment
-* Persistent storage
-* Activity tracking
-* Asynchronous notifications
-* Authentication and authorization
 
