@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from ..activity_logger import log_activity
+from ..auth import get_current_user
 from ..database import get_db
-from ..models import Project, UserStory
+from ..models import Project, UserStory, User
 from ..schemas import StoryCreate, StoryUpdate, StoryResponse
 
 router = APIRouter(
@@ -19,9 +21,9 @@ router = APIRouter(
 def create_story(
     project_id: int,
     story: StoryCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    # Check whether project exists
     project = db.query(Project).filter(
         Project.id == project_id
     ).first()
@@ -41,6 +43,18 @@ def create_story(
     )
 
     db.add(new_story)
+    db.flush()
+
+    log_activity(
+        db,
+        user_id=current_user.id,
+        project_id=project_id,
+        action="CREATE",
+        entity_type="STORY",
+        entity_id=new_story.id,
+        details=f"Created story '{new_story.title}'"
+    )
+
     db.commit()
     db.refresh(new_story)
 
@@ -101,7 +115,8 @@ def get_story(
 def update_story(
     story_id: int,
     story_data: StoryUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     story = db.query(UserStory).filter(
         UserStory.id == story_id
@@ -117,8 +132,31 @@ def update_story(
         exclude_unset=True
     )
 
+    changes = []
+
     for key, value in update_data.items():
+        old_value = getattr(story, key)
+
+        if old_value != value:
+            changes.append(
+                f"{key}: '{old_value}' -> '{value}'"
+            )
+
         setattr(story, key, value)
+
+    if changes:
+        log_activity(
+            db,
+            user_id=current_user.id,
+            project_id=story.project_id,
+            action="UPDATE",
+            entity_type="STORY",
+            entity_id=story.id,
+            details=(
+                f"Updated story '{story.title}': "
+                + ", ".join(changes)
+            )
+        )
 
     db.commit()
     db.refresh(story)
@@ -133,7 +171,8 @@ def update_story(
 )
 def delete_story(
     story_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     story = db.query(UserStory).filter(
         UserStory.id == story_id
@@ -144,6 +183,20 @@ def delete_story(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User story not found"
         )
+
+    project_id = story.project_id
+    story_id_value = story.id
+    story_title = story.title
+
+    log_activity(
+        db,
+        user_id=current_user.id,
+        project_id=project_id,
+        action="DELETE",
+        entity_type="STORY",
+        entity_id=story_id_value,
+        details=f"Deleted story '{story_title}'"
+    )
 
     db.delete(story)
     db.commit()
