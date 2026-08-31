@@ -2,6 +2,27 @@
 
 AgileFlow is a full-stack Agile Project Management Tool for a small team. It uses React/Vite, FastAPI, SQLAlchemy, and SQLite to manage **Project → User Story → Task**.
 
+## Table of Contents
+
+- [AgileFlow Platform](#agileflow-platform)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+  - [Frontend](#frontend)
+  - [Backend](#backend)
+  - [Database](#database)
+  - [Testing](#testing)
+- [Work-item States](#work-item-states)
+- [Async Notification Workflow](#async-notification-workflow)
+- [Architecture and API Documentation](#architecture-and-api-documentation)
+- [Local Setup](#local-setup)
+- [Testing](#testing-1)
+- [Repository Structure](#repository-structure)
+- [Security Considerations](#security-considerations)
+- [Design Decisions and Tradeoffs](#design-decisions-and-tradeoffs)
+- [AI Usage](#ai-usage)
+- [With More Time](#with-more-time)
+- [Demo](#demo)
+
 ## Features
 
 - Registration, login, expiring JWT authentication, and protected frontend routes.
