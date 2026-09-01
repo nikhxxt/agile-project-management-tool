@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from app.main import app
 from app.database import SessionLocal
-from app.models import Notification
+from app.models import Notification, User
 from app.routes.notifications import MAX_NOTIFICATION_ATTEMPTS, process_notification
 
 
@@ -52,6 +52,28 @@ def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
+
+
+def test_login_accepts_legacy_plaintext_passwords():
+    email = f"legacy-{uuid4().hex}@example.com"
+    password = "legacy-password"
+
+    db = SessionLocal()
+    try:
+        user = User(name="Legacy User", email=email, password_hash=password, role="member")
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    finally:
+        db.close()
+
+    response = client.post(
+        "/auth/login",
+        data={"username": email, "password": password},
+    )
+
+    assert response.status_code == 200
+    assert "access_token" in response.json()
 
 
 def test_registration_requires_a_valid_password():
@@ -177,6 +199,64 @@ def test_notification_is_only_visible_to_assignee():
     assert client.get(f"/notifications/{notification['id']}", headers=owner_headers).status_code == 404
     assert client.delete(f"/notifications/{notification['id']}", headers=owner_headers).status_code == 404
     assert client.get(f"/projects/{project['id']}", headers=assignee_headers).status_code == 200
+
+
+def test_old_notifications_still_load_for_their_recipient():
+    recipient_headers = authenticated_headers()
+    recipient = client.get("/auth/me", headers=recipient_headers).json()
+    project, _, task = create_project_hierarchy(authenticated_headers())
+
+    db = SessionLocal()
+    try:
+        notification = Notification(
+            task_id=task["id"],
+            recipient_id=recipient["id"],
+            message="Legacy notification that should still be visible",
+            status="SENT",
+            retry_count=0,
+        )
+        db.add(notification)
+        db.commit()
+        db.refresh(notification)
+    finally:
+        db.close()
+
+    response = client.get("/notifications", headers=recipient_headers)
+    assert response.status_code == 200
+    assert any(item["id"] == notification.id for item in response.json())
+
+    detail = client.get(f"/notifications/{notification.id}", headers=recipient_headers)
+    assert detail.status_code == 200
+    assert detail.json()["id"] == notification.id
+
+
+def test_missing_assignment_notifications_are_backfilled_for_assignee():
+    owner_headers = authenticated_headers()
+    assignee_headers = authenticated_headers()
+    assignee = client.get("/auth/me", headers=assignee_headers).json()
+    project = client.post("/projects", json={"name": f"Project {uuid4().hex}"}, headers=owner_headers)
+    assert project.status_code == 201
+    assert client.post(f"/users/{assignee['id']}/projects/{project.json()['id']}", headers=owner_headers).status_code == 201
+
+    story = client.post(
+        f"/projects/{project.json()['id']}/stories",
+        json={"title": "A story", "status": "BACKLOG", "priority": "MEDIUM"},
+        headers=owner_headers,
+    )
+    assert story.status_code == 201
+
+    task = client.post(
+        f"/stories/{story.json()['id']}/tasks",
+        json={"title": "A task", "status": "TODO", "priority": "HIGH", "assigned_to": assignee["id"]},
+        headers=owner_headers,
+    )
+    assert task.status_code == 201
+
+    response = client.get("/notifications", headers=assignee_headers)
+    assert response.status_code == 200
+    assert any(item["task_id"] == task.json()["id"] and item["message"] == f"You were assigned task '{task.json()['title']}'" for item in response.json())
+
+    assert client.get(f"/projects/{project.json()['id']}", headers=assignee_headers).status_code == 200
 
 
 def test_status_and_priority_validation_and_progress_not_found():

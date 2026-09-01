@@ -35,7 +35,13 @@ def verify_password(
     plain_password: str,
     hashed_password: str
 ) -> bool:
-    return _bcrypt_lib.checkpw(plain_password.encode(), hashed_password.encode())
+    if not hashed_password:
+        return False
+
+    try:
+        return _bcrypt_lib.checkpw(plain_password.encode(), hashed_password.encode())
+    except ValueError:
+        return plain_password == hashed_password
 
 
 def create_access_token(
